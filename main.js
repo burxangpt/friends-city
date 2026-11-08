@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { io } from '/socket.io/socket.io.esm.min.js';
 
 const $ = s => document.querySelector(s);
+const isTouch = matchMedia('(pointer: coarse)').matches, touch = { x: 0, y: 0 };
 const PI = Math.PI;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const angDiff = (a, b) => { let d = (b - a) % (2 * PI); if (d > PI) d -= 2 * PI; if (d < -PI) d += 2 * PI; return d; };
@@ -483,7 +484,7 @@ addEventListener('keydown', e => {
   if (typing()) { if (e.code === 'Escape') chatInput.blur(); return; }
   if (!me) return;
   keys[e.code] = true; if (e.code === 'Space') e.preventDefault();
-  if (e.code === 'KeyV') { fp = !fp; $('#cross').style.display = fp ? 'block' : 'none'; fp ? renderer.domElement.requestPointerLock() : document.exitPointerLock(); }
+  if (e.code === 'KeyV') toggleView();
   if (e.code === 'KeyN') nightT = nightT ? 0 : 1;
   if (e.code === 'KeyE' && nearPlot && !(nearPlot.data && nearPlot.data.owner) && !myPlotId) socket.emit('claim', nearPlot.slot.id);
   if (e.code === 'KeyB' && myPlotId && nearPlot && nearPlot.slot.id === myPlotId) openEditor();
@@ -550,6 +551,47 @@ function refreshEditor() {
 function openEditor() { if (document.pointerLockElement) document.exitPointerLock(); fp = false; $('#cross').style.display = 'none'; editorEl.style.display = 'block'; refreshEditor(); }
 function closeEditor() { editorEl.style.display = 'none'; }
 
+function toggleView() {
+  fp = !fp; $('#cross').style.display = fp ? 'block' : 'none';
+  if (!isTouch) { if (fp) renderer.domElement.requestPointerLock(); else document.exitPointerLock(); }
+}
+hintEl.onclick = () => {
+  if (!nearPlot) return; const d = nearPlot.data;
+  if (!(d && d.owner)) { if (!myPlotId) socket.emit('claim', nearPlot.slot.id); } else if (nearPlot.slot.id === myPlotId) openEditor();
+};
+function setupTouch() {
+  document.body.classList.add('touch');
+  const hud = $('#hud'), mk = (tag, id) => { const e = document.createElement(tag); e.id = id; return e; };
+  const base = mk('div', 'stick'), knob = mk('div', 'knob'); base.append(knob); hud.append(base);
+  let sid = null;
+  const move = t => {
+    const r = base.getBoundingClientRect(), R = r.width / 2;
+    let dx = (t.clientX - (r.left + R)) / R, dy = (t.clientY - (r.top + R)) / R; const m = Math.hypot(dx, dy);
+    if (m > 1) { dx /= m; dy /= m; }
+    knob.style.transform = 'translate(' + dx * 35 + 'px,' + dy * 35 + 'px)';
+    touch.x = m < 0.15 ? 0 : dx; touch.y = m < 0.15 ? 0 : -dy;
+  };
+  const end = () => { sid = null; touch.x = touch.y = 0; knob.style.transform = ''; };
+  base.addEventListener('touchstart', e => { e.preventDefault(); const t = e.changedTouches[0]; sid = t.identifier; move(t); }, { passive: false });
+  base.addEventListener('touchmove', e => { e.preventDefault(); for (const t of e.changedTouches) if (t.identifier === sid) move(t); }, { passive: false });
+  base.addEventListener('touchend', end); base.addEventListener('touchcancel', end);
+  const j = mk('button', 'jumpBtn'); j.type = 'button'; j.textContent = 'Прыжок'; hud.append(j);
+  j.addEventListener('touchstart', e => { e.preventDefault(); keys.Space = true; }, { passive: false });
+  j.addEventListener('touchend', () => { keys.Space = false; }); j.addEventListener('touchcancel', () => { keys.Space = false; });
+  const addBtn = (txt, fn) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = txt; b.onclick = fn; $('#btns').append(b); };
+  addBtn('Вид', toggleView); addBtn('Ночь', () => { nightT = nightT ? 0 : 1; });
+  $('#homeBtn').textContent = 'К моему дому';
+  let cid = null, lx = 0, ly = 0; const cv = renderer.domElement; cv.style.touchAction = 'none';
+  cv.addEventListener('touchstart', e => { if (cid !== null || !me) return; const t = e.changedTouches[0]; cid = t.identifier; lx = t.clientX; ly = t.clientY; }, { passive: true });
+  cv.addEventListener('touchmove', e => {
+    for (const t of e.changedTouches) if (t.identifier === cid) {
+      const dx = t.clientX - lx, dy = t.clientY - ly; lx = t.clientX; ly = t.clientY; yaw -= dx * 0.006;
+      if (fp) fpPitch = clamp(fpPitch - dy * 0.006, -1.2, 1.2); else pitch = clamp(pitch + dy * 0.006, 0.05, 1.3);
+    }
+  }, { passive: true });
+  const ce = e => { for (const t of e.changedTouches) if (t.identifier === cid) cid = null; };
+  cv.addEventListener('touchend', ce); cv.addEventListener('touchcancel', ce);
+}
 function goHome() {
   const p = myPlotId && plots.get(myPlotId);
   if (!p) { addMsg('Город', 'У вас пока нет дома. Подойдите к свободному участку и нажмите E'); return; }
@@ -608,10 +650,11 @@ function resolve(p) {
 }
 function updateMe(dt) {
   const fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = Math.cos(yaw), rz = -Math.sin(yaw);
-  const iz = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0);
-  const ix = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0);
+  let iz = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0);
+  let ix = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0);
+  if (isTouch) { ix += touch.x; iz += touch.y; }
   let mx = fx * iz + rx * ix, mz = fz * iz + rz * ix; const len = Math.hypot(mx, mz);
-  moving = len > 0; const run = !!keys.ShiftLeft;
+  moving = len > 0; const run = !!keys.ShiftLeft || (isTouch && Math.hypot(touch.x, touch.y) > 0.85);
   if (moving) { mx /= len; mz /= len; const sp = run ? 10 : 5.5; pos.x += mx * sp * dt; pos.z += mz * sp * dt; resolve(pos); face = Math.atan2(mx, mz); }
   me.rotation.y += angDiff(me.rotation.y, face) * Math.min(1, dt * 12);
   if (keys.Space && jy === 0) vy = 9.5;
@@ -635,7 +678,7 @@ function updateMe(dt) {
   insideNow = !!inP;
   plots.forEach(q => { const r = q.group && q.group.userData.roof; if (r) r.visible = q !== inP; });
   let hint = '';
-  if (near) hint = !(near.data && near.data.owner) ? (myPlotId ? 'У вас уже есть участок' : 'E — занять этот участок') : near.data.owner === myName ? 'B — изменить дом' : 'Дом игрока ' + near.data.owner;
+  if (near) hint = !(near.data && near.data.owner) ? (myPlotId ? 'У вас уже есть участок' : (isTouch ? 'Нажмите, чтобы занять участок' : 'E — занять этот участок')) : near.data.owner === myName ? (isTouch ? 'Нажмите, чтобы изменить дом' : 'B — изменить дом') : 'Дом игрока ' + near.data.owner;
   if (hint !== lastHint) { lastHint = hint; hintEl.textContent = hint; hintEl.style.display = hint ? 'block' : 'none'; }
   if (editorEl.style.display === 'block' && !(near && near.slot.id === myPlotId)) closeEditor();
   netT += dt; if (socket && netT > 1 / 30) { netT = 0; socket.emit('move', { x: pos.x, z: pos.z, ry: me.rotation.y, m: moving, y: jy }); }
@@ -654,4 +697,5 @@ function frame(now) {
   if (nightV < 0 || Math.abs(nightT - nightV) > 0.002) applyNight(Math.max(0, nightV));
   renderer.render(scene, camera); requestAnimationFrame(frame);
 }
+if (isTouch) setupTouch();
 requestAnimationFrame(frame);

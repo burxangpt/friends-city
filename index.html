@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Friends City</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -48,6 +48,16 @@ canvas{display:block}
 #btns button{padding:10px 14px;border-radius:10px;border:0;background:rgba(20,19,43,.75);color:var(--paper);font:600 14px Onest,sans-serif;cursor:pointer}
 #btns button:hover{background:var(--peach);color:var(--ink)}
 #btns button:focus-visible{outline:3px solid var(--mint)}
+#hint{pointer-events:auto;cursor:pointer}
+#stick{position:absolute;left:28px;bottom:48px;width:120px;height:120px;border-radius:50%;background:rgba(20,19,43,.45);border:2px solid rgba(246,239,230,.4);pointer-events:auto;touch-action:none;user-select:none}
+#knob{position:absolute;left:35px;top:35px;width:50px;height:50px;border-radius:50%;background:rgba(246,239,230,.85)}
+#jumpBtn{position:absolute;right:20px;bottom:140px;width:78px;height:78px;border-radius:50%;border:2px solid rgba(246,239,230,.5);background:rgba(255,178,122,.85);color:#14132b;font:600 14px Onest,sans-serif;pointer-events:auto;touch-action:none}
+body.touch .tip{display:none}
+body.touch #chat{top:56px;bottom:auto;left:12px;width:min(300px,58vw);display:flex;flex-direction:column-reverse}
+body.touch #chat input{font-size:16px}
+body.touch #btns{flex-wrap:wrap;justify-content:flex-end;max-width:62vw;bottom:12px;right:12px}
+body.touch #hint{bottom:170px}
+body.touch #editor{top:56px;max-height:calc(100vh - 80px)}
 </style>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
 </head>
