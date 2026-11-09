@@ -58,6 +58,9 @@ body.touch #chat input{font-size:16px}
 body.touch #btns{flex-wrap:wrap;justify-content:flex-end;max-width:62vw;bottom:12px;right:12px}
 body.touch #hint{bottom:170px}
 body.touch #editor{top:56px;max-height:calc(100vh - 80px)}
+#zoom{position:absolute;right:16px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px;pointer-events:auto}
+#zoom button{width:44px;height:44px;border-radius:50%;border:0;background:rgba(20,19,43,.75);color:var(--paper);font:600 24px Onest,sans-serif;cursor:pointer;touch-action:none;user-select:none}
+#zoom button:hover{background:var(--peach);color:var(--ink)}
 </style>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
 </head>
@@ -76,6 +79,7 @@ body.touch #editor{top:56px;max-height:calc(100vh - 80px)}
   <div class="online" id="online"></div>
   <div id="cross"></div>
   <div id="hint"></div>
+  <div id="zoom"><button id="zin" type="button" aria-label="Приблизить">+</button><button id="zout" type="button" aria-label="Отдалить">−</button></div>
   <div id="btns"><button id="homeBtn" type="button">К моему дому (H)</button><button id="inviteBtn" type="button">Пригласить друзей</button></div>
   <div id="editor">
     <h3>Ваш дом</h3>

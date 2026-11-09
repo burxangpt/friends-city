@@ -98,7 +98,7 @@ io.on('connection', socket => {
   socket.on('move', d => {
     const p = players.get(socket.id);
     if (!p || !d) return;
-    p.x = +d.x || 0; p.z = +d.z || 0; p.ry = +d.ry || 0; p.m = d.m ? 1 : 0; p.y = Math.max(0, Math.min(5, +d.y || 0));
+    p.x = +d.x || 0; p.z = +d.z || 0; p.ry = +d.ry || 0; p.m = d.m ? 1 : 0; p.y = Math.max(0, Math.min(10, +d.y || 0));
     const u = db.users[p.key]; u.x = p.x; u.z = p.z;
     socket.volatile.broadcast.emit('moved', { id: p.id, x: p.x, z: p.z, ry: p.ry, m: p.m, y: p.y });
   });
